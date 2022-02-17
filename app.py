@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
 
+
 # DATABASE_URI='sqlite://users.db'
 DATABASE_URI='postgres://team4:0000@localhost:5432/flask'
 

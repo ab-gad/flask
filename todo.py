@@ -1,15 +1,32 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 
-
-
+# username and password for testing 
+USERNAME = "admin"
+PASSWORD = "0000"
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://team4:0000@localhost:5432/flask'
 
+# jwt configuration
+app.config['JWT_SECRET_KEY'] = "secrt1246"
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
+
+# in case you wanna change ur token location
+# app.config['JWT_token_LOCATION'] = ['cookies']
+# it will be send in the request header by default
+
+jwt = JWTManager(app)
+
+# setting our DB settiongs
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://team4:0000@localhost:5432/flask'
 db = SQLAlchemy(app)
+
+#########
+# MODLES
+#########
 
 class Category(db.Model):
     __tablename__ = 'category'
@@ -36,6 +53,8 @@ class Task(db.Model):
         return f'Task("{self.title}", "{self.created_at}")'
 
 db.create_all() # migration
+
+# defining our api endpoints
 
 @app.route('/category', methods=['GET', 'POST'])
 def category():
@@ -110,7 +129,10 @@ def task():
         })
 
 @app.route('/task/<int:id>', methods=['GET', 'DELETE', 'PUT'])
+@jwt_required()
 def edit_task(id):
+    username = get_jwt_identity()
+    print(username)
     t= Task.query.filter_by(id=id).first()
     if request.method == 'GET':
         dict = {}
@@ -150,7 +172,24 @@ def edit_task(id):
             "data": "user deleted successfully"
         })
 
+# authentication end points
+@app.route('/login', methods=['POST'])
+def login():
+    data = json.loads(request.data)
+    if data['username'] == USERNAME and data['password'] == PASSWORD:
+        access_token = create_access_token(identity=data["username"]) 
 
+        return jsonify({
+            "status" : "success",
+            "data" : {'access_token': access_token}
+        })
+
+    else:
+        return jsonify({
+            "status" : "failure auth",
+            'msg': 'wrong username or password' 
+        })
+    
 
 @app.route('/')
 def home():
